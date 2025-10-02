@@ -2,10 +2,10 @@ from settings import np, epsilon
 
 def geodesic(state: np.ndarray, r_s: float, E: float) -> np.ndarray:
     """
-    Calculates the trajectory of light across schwarzschild spacetime.
+    Calculates the trajectory of light across Schwarzschild spacetime.
     Args:
         state (np.ndarray) : a vector representative of [r, ϕ, dr, dϕ]
-        r_s (float) : the schwarzschild radius of the central black hole
+        r_s (float) : the Schwarzschild radius of the central black hole
         E (float) : the conserved energy of the light ray
     Returns:
         np.ndarray : the derivative of the state vector
@@ -15,8 +15,8 @@ def geodesic(state: np.ndarray, r_s: float, E: float) -> np.ndarray:
     r += epsilon
 
     # recompute key values
-    f = 1 - r_s/r
-    dt = E /f
+    f = 1 - r_s/r + epsilon
+    dt = E / f
 
     # radial acceleration
     d2r = (
@@ -28,7 +28,7 @@ def geodesic(state: np.ndarray, r_s: float, E: float) -> np.ndarray:
     # angular acceleration
     d2phi = -2*(dr*dphi/r)
 
-    return np.array([dr, dphi, d2r, d2phi], dtype=np.float64)
+    return np.array([dr, dphi, d2r, d2phi])
 
 def rk4_step(
         state: np.ndarray, r_s: float, h: float, E: float
@@ -38,7 +38,7 @@ def rk4_step(
     integrating a photons trajectory over time.
     Args:
         state (np.ndarray) : a vector representative of [r, ϕ, dr, dϕ]
-        r_s (float) : the schwarzschild radius of the central black hole
+        r_s (float) : the Schwarzschild radius of the central black hole
         h (float) : an arbitrary step size; the affine parameter
         E (float) : the conserved energy of the light ray
     Returns:

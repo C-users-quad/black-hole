@@ -1,19 +1,18 @@
 from settings import (
-    np, pygame, K_d, K_a, K_s, K_w, 
+    np, pygame, K_d, K_a, K_s, K_w, Literal,
     MIN_ZOOM, WINDOW_WIDTH, WINDOW_HEIGHT
 )
 
 class Camera:
-    def __init__(self, x:float, y: float) -> None:
-        self.pos = np.array([x, y], dtype=np.float64)
-        self.direction = np.zeros(
-            shape=(2,), 
-            dtype=np.float64
-        )
+    """2D camera"""
+    def __init__(self, x: float, y: float) -> None:
+        self.pos = np.array([x, y])
+        self.direction = np.zeros(shape=(2,))
         self.speed = 1000
         self.zoom = 1
 
     def input(self) -> None:
+        """Changes movement direction depending on key input"""
         keys = pygame.key.get_pressed()
         self.direction[0] = int(keys[K_d]) - int(keys[K_a])
         self.direction[1] = int(keys[K_s]) - int(keys[K_w])
@@ -22,9 +21,14 @@ class Camera:
             self.direction /= mag_dir
 
     def move(self, dt: float) -> None:
+        """Updates camera position based on current direction"""
         self.pos += self.direction * self.speed * dt
 
-    def update_zoom(self, event_y):
+    def update_zoom(self, event_y: Literal[-1, 1]) -> None:
+        """
+        Updates zoom clamped to a minimum
+        based on mouse scroll input
+        """
         new_zoom = self.zoom * 1.1 ** event_y
         self.zoom = max(MIN_ZOOM, new_zoom)
 

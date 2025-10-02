@@ -1,7 +1,6 @@
 from settings import (
-    pygame, WINDOW_WIDTH, WINDOW_HEIGHT, NUM_RAYS, 
-    SRCALPHA, RESIZABLE, FPS, QUIT, MOUSEWHEEL, 
-    sys, prange
+    pygame, sys, WINDOW_WIDTH, WINDOW_HEIGHT, CLEAR_COLOR, 
+    NUM_RAYS, SRCALPHA, RESIZABLE, FPS, QUIT, MOUSEWHEEL
 )
 from sprites import BlackHole, generate_rays
 from cam import Camera
@@ -11,17 +10,21 @@ class Game:
         # general setup
         pygame.init()
         self.display = pygame.display.set_mode(
-            (WINDOW_WIDTH, WINDOW_HEIGHT), SRCALPHA | RESIZABLE
+            size=(WINDOW_WIDTH, WINDOW_HEIGHT),
+            flags=SRCALPHA | RESIZABLE
         )
         self.on = True
         self.clock = pygame.time.Clock()
-        self.cam = Camera(x=0, y=0)
+        self.cam = Camera(
+            x=WINDOW_WIDTH/2,
+            y=WINDOW_HEIGHT/2
+        )
 
         # sprite setup
         self.black_hole = BlackHole(
             mass=500, 
-            x=WINDOW_WIDTH/2+500, 
-            y=WINDOW_HEIGHT/2 + 100
+            x=WINDOW_WIDTH/2, 
+            y=WINDOW_HEIGHT/2
         )
         self.rays = generate_rays(
             n=NUM_RAYS, 
@@ -31,29 +34,29 @@ class Game:
     
     def run(self):
         while self.on:
+            # time between frames in seconds
             self.dt = self.clock.tick(FPS) / 1000
             self.event_handler()
             self.update()
-            self.display.fill('black')
             self.draw()
-            pygame.display.update()
-            print(self.cam.zoom)
+        pygame.quit()
+        sys.exit()
 
     def event_handler(self):
         for event in pygame.event.get():
             if event.type == QUIT:
                 self.on = False
-                pygame.quit()
-                sys.exit()
             elif event.type == MOUSEWHEEL:
                 self.cam.update_zoom(event.y)
 
     def draw(self):
+        # clear window
+        self.display.fill(CLEAR_COLOR)
         # draw rays
         for ray in self.rays:
             pygame.draw.lines(
-                self.display, ray.color, False, 
-                ray.get_trail(self.cam), 
+                self.display, ray.color, False,
+                ray.get_trail(self.cam),
                 int(ray.radius * self.cam.zoom)
             )
         # draw black hole
@@ -63,12 +66,13 @@ class Game:
             self.cam.make_cam_relative(self.black_hole.pos),
             self.black_hole.r_s * self.cam.zoom
         )
+        pygame.display.flip()
 
     def update(self):
         for ray in self.rays:
-            return_value = ray.step(
-                self.black_hole.r_s, 
-                self.black_hole.pos
+            ray.step(
+                self.black_hole.pos,
+                self.black_hole.r_s
             )
         self.cam.update(self.dt)
 
