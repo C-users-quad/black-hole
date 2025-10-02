@@ -1,4 +1,7 @@
-from settings import np, pygame, K_d, K_a, K_s, K_w, MIN_ZOOM, WINDOW_WIDTH, WINDOW_HEIGHT
+from settings import (
+    np, pygame, K_d, K_a, K_s, K_w, 
+    MIN_ZOOM, WINDOW_WIDTH, WINDOW_HEIGHT
+)
 
 class Camera:
     def __init__(self, x:float, y: float) -> None:
@@ -28,10 +31,14 @@ class Camera:
     def make_cam_relative(
             self, point: tuple[float, float]
         ) -> tuple[float, float]:
-        """Returns the inserted point made relative to the cameras position"""
+        """
+        Returns the inserted point 
+        made relative to the cameras position
+        """
         return (
             (point[0] - self.pos[0]) * self.zoom + WINDOW_WIDTH / 2, 
-            (point[1] - self.pos[1]) * self.zoom + WINDOW_HEIGHT / 2)
+            (point[1] - self.pos[1]) * self.zoom + WINDOW_HEIGHT / 2
+        )
 
     def update(self, dt: float) -> None:
         """Gets key input and updates the cameras position"""

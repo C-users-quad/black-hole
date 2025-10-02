@@ -1,6 +1,8 @@
 from settings import np, epsilon, Sequence
 
-def polar_to_cartesian_coords(r: float, phi: float) -> tuple[float, float]:
+def polar_to_cartesian_coords(
+        r: float, phi: float
+    ) -> tuple[float, float]:
     """
     Converts a point in polar coordinates
     to a point in cartesian coordinates.
@@ -20,7 +22,9 @@ def polar_to_cartesian_coords(r: float, phi: float) -> tuple[float, float]:
     y = r * np.sin(phi)
     return x, y
 
-def cartesian_to_polar_coords(x: float, y: float) -> tuple[float, float]:
+def cartesian_to_polar_coords(
+        x: float, y: float
+    ) -> tuple[float, float]:
     """
     Converts a point in cartesian coordinates 
     to a point in polar coordinates.
@@ -78,7 +82,9 @@ def polar_to_cartesian_vel(
     dy = dr*np.sin(phi) + r*np.cos(phi)*dphi
     return dx, dy
 
-def point_in_rect(point: Sequence[float], rect: Sequence[float]) -> bool:
+def point_in_rect(
+        point: Sequence[float], rect: Sequence[float]
+    ) -> bool:
     """
     Determines if a 2d point is contained within a 2d rectangle
     in cartesian coordinates.
