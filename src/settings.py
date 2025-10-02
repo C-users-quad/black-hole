@@ -6,20 +6,20 @@ from typing import Sequence, Literal, TYPE_CHECKING
 
 # settings
 WINDOW_WIDTH, WINDOW_HEIGHT = 900, 800
-HALF_WORLD_LENGTH = 10000
+HALF_WORLD_LENGTH = 2500
 WORLD_RECT = ( # (left, top, width, height)
-    -HALF_WORLD_LENGTH, -HALF_WORLD_LENGTH, 
+    0, 0, 
     2*HALF_WORLD_LENGTH, 2*HALF_WORLD_LENGTH
 )
 FPS = 120
-NUM_RAYS = 50
+NUM_RAYS = 350
 MIN_ZOOM = 0.217
-CLEAR_COLOR = (0,0,0)
+CLEAR_COLOR = (0, 0, 0)
 RAY_TRAIL_RADIUS = 5
-RAY_TRAIL_COLOR = (255,255,255)
+RAY_TRAIL_COLOR = (255, 255, 255)
 
 # physical constants
 G = 1
 h = 1
-c = 3
+c = 15
 epsilon = 1e-2

@@ -1,6 +1,6 @@
 from settings import (
-    G, c, np, h, WORLD_RECT, WINDOW_HEIGHT, 
-    RAY_TRAIL_COLOR, RAY_TRAIL_RADIUS, TYPE_CHECKING
+    G, c, np, h, RAY_TRAIL_COLOR, 
+    RAY_TRAIL_RADIUS, TYPE_CHECKING, WORLD_RECT
 )
 from utils import (
     cartesian_to_polar_coords, cartesian_to_polar_vel, 
@@ -133,13 +133,17 @@ def generate_rays(
     rays = []
 
     if n == 1:
-        y = WINDOW_HEIGHT / 2
+        y = WORLD_RECT[3] / 2
         rays.append(Ray(0, y, -c, 0))
         return rays
     
     for i in range(n):
+        if i >= n/2:
+            angular_velocity = 1.5
+        else:
+            angular_velocity = -1.5
         rays.append(
-            Ray(0, WINDOW_HEIGHT - WINDOW_HEIGHT/(n-1)*i,
-                c, 1, bh_pos, r_s)
+            Ray(0, WORLD_RECT[3] - WORLD_RECT[3]/(n-1)*i,
+                c, angular_velocity, bh_pos, r_s)
         )
     return rays

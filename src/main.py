@@ -1,6 +1,7 @@
 from settings import (
     pygame, sys, WINDOW_WIDTH, WINDOW_HEIGHT, CLEAR_COLOR, 
-    NUM_RAYS, SRCALPHA, RESIZABLE, FPS, QUIT, MOUSEWHEEL
+    NUM_RAYS, SRCALPHA, RESIZABLE, FPS, QUIT, MOUSEWHEEL,
+    WORLD_RECT
 )
 from sprites import BlackHole, generate_rays
 from cam import Camera
@@ -22,9 +23,9 @@ class Game:
 
         # sprite setup
         self.black_hole = BlackHole(
-            mass=500, 
-            x=WINDOW_WIDTH/2, 
-            y=WINDOW_HEIGHT/2
+            mass=100000, 
+            x=WORLD_RECT[2]/2, 
+            y=WORLD_RECT[3]/2
         )
         self.rays = generate_rays(
             n=NUM_RAYS, 
