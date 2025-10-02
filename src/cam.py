@@ -1,4 +1,4 @@
-from settings import np, pygame, K_d, K_a, K_s, K_w
+from settings import np, pygame, K_d, K_a, K_s, K_w, MIN_ZOOM, WINDOW_WIDTH, WINDOW_HEIGHT
 
 class Camera:
     def __init__(self, x:float, y: float) -> None:
@@ -8,6 +8,7 @@ class Camera:
             dtype=np.float64
         )
         self.speed = 1000
+        self.zoom = 1
 
     def input(self) -> None:
         keys = pygame.key.get_pressed()
@@ -20,11 +21,17 @@ class Camera:
     def move(self, dt: float) -> None:
         self.pos += self.direction * self.speed * dt
 
+    def update_zoom(self, event_y):
+        new_zoom = self.zoom * 1.1 ** event_y
+        self.zoom = max(MIN_ZOOM, new_zoom)
+
     def make_cam_relative(
             self, point: tuple[float, float]
         ) -> tuple[float, float]:
         """Returns the inserted point made relative to the cameras position"""
-        return (point[0] - self.pos[0], point[1] - self.pos[1])
+        return (
+            (point[0] - self.pos[0]) * self.zoom + WINDOW_WIDTH / 2, 
+            (point[1] - self.pos[1]) * self.zoom + WINDOW_HEIGHT / 2)
 
     def update(self, dt: float) -> None:
         """Gets key input and updates the cameras position"""

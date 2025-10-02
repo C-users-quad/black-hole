@@ -1,5 +1,5 @@
 import pygame
-from pygame.constants import K_w, K_s, K_a, K_d, SRCALPHA, QUIT
+from pygame.constants import K_w, K_s, K_a, K_d, SRCALPHA, QUIT, RESIZABLE, MOUSEWHEEL
 import numpy as np
 import sys
 import matplotlib.pyplot as plt
@@ -14,7 +14,9 @@ WORLD_RECT = (
 )
 FPS = 300
 NUM_RAYS = 100
+MIN_ZOOM = 0.217
 
-G = h = 1
-c = 2
+G = 1
+h = 1
+c = 5
 epsilon = 1e-2

@@ -99,7 +99,7 @@ def generate_rays(
         rays : a list of Ray objects.
     """
     rays = []
-    
+    half_win_h = WINDOW_HEIGHT / 2
     if n == 1:
         y = WINDOW_HEIGHT / 2
         rays.append(Ray(0, y, -c, 0))
@@ -107,7 +107,7 @@ def generate_rays(
     
     for i in range(n):
         rays.append(
-            Ray(0, WINDOW_HEIGHT - WINDOW_HEIGHT/(n-1)*i,
+            Ray(0, half_win_h - half_win_h/(n-1)*i,
                 c, 0, bh_pos, r_s)
         )
     return rays
