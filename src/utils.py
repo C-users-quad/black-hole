@@ -1,4 +1,4 @@
-from settings import *
+from settings import np, epsilon, Sequence
 
 def polar_to_cartesian_coords(r: float, phi: float) -> tuple[float, float]:
     """
@@ -55,11 +55,28 @@ def cartesian_to_polar_vel(
     Returns:
         (dr, dphi) : radial and angular velocity components
     """
-    cos_phi = np.cos(phi)
-    sin_phi = np.sin(phi)
-    dr = vx*cos_phi + vy*sin_phi
-    dphi = (-vx*sin_phi + vy*cos_phi) / (r + epsilon)
+    dr = vx*np.cos(phi) + vy*np.sin(phi)
+    dphi = (-vx*np.sin(phi) + vy*np.cos(phi)) / (r + epsilon)
     return dr, dphi
+
+def polar_to_cartesian_vel(
+        r: float, phi: float, dr: float, dphi: float
+    ) -> tuple[float, float]:
+    """
+    Convert a desired Polar velocity (dr, dphi) 
+    into cartesian velocities (dx, dy)
+    at a given polar position (r, phi).
+    Args:
+        r (float) : the current radial coordinate.
+        phi (float) : the current angular coordinate.
+        dr (float) : the current radial velocity.
+        dphi (float) : the current angular velocity.
+    Returns:
+        (dx, dy) : the cartesian velocity
+    """
+    dx = dr*np.cos(phi) - r*np.sin(phi)*dphi
+    dy = dr*np.sin(phi) + r*np.cos(phi)*dphi
+    return dx, dy
 
 def point_in_rect(point: Sequence[float], rect: Sequence[float]) -> bool:
     """
