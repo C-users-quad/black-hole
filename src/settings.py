@@ -1,5 +1,4 @@
 import numpy as np
-import math
 import moderngl
 import moderngl_window as glw
 import glm
