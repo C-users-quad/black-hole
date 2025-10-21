@@ -57,3 +57,14 @@ def cartesian_to_spherical_vel(pos, vel):
         dphi = (vy*np.cos(phi) - vx*np.sin(phi)) / (r*np.sin(theta))
 
     return dr, dtheta, dphi
+
+def compute_energy(bh_mass, r, dr, dphi):
+    """Compute the conserved energy E for the photon."""
+    return (1 - 2 * bh_mass / r) * np.sqrt(dr**2 + r**2 * dphi**2)
+
+def compute_dt(bh_mass, r, E):
+    """
+    Compute the time component dt based on the conserved energy E.
+    """
+    # Compute dt from E and r
+    return E / (1 - 2 * bh_mass / r)
