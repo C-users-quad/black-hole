@@ -23,7 +23,7 @@ indices = np.array([
     5, 6, 7,
 
     0, 4, 2, # left triangles
-    4, 2, 6, 
+    4, 2, 6,
 
     1, 5, 3, # right triangles
     5, 3, 7,

@@ -29,3 +29,11 @@ frag_shader=(
     }
     """
 )
+
+compute_shader = (
+    """
+    #version 430
+
+    
+    """
+)

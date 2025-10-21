@@ -25,20 +25,35 @@ def get_mvp_matrix(cam_pos, aspect):
     model = glm.mat4(1.0)
     return projection * view * model
 
-def spherical_to_cartesian(r, theta, phi):
-    x = r*np.sin(theta)*np.cos(phi)
-    y = r*np.sin(theta)*np.sin(phi)
-    z = r*np.cos(theta)
-    return (x, y, z)
+def cartesian_to_spherical_pos(pos):
+    """
+    given pos=(x, y, z),
+    returns (r, theta, phi)
+    """
+    x, y, z = pos
 
-def cartesian_to_spherical(x, y, z):
     r = np.sqrt(x*x + y*y + z*z)
-    theta = np.acos(max(-1,min(1,z/(r+EPSILON))))
-    phi = np.atan2(y,x)
-    return (r, theta, phi)
+    theta = np.acos(clamp(z / r, -1, 1))
+    phi = np.atan2(y, x)
 
-def normalize(v):
-    norm = np.linalg.norm(v)
-    if norm < EPSILON:
-        return v
-    return v / norm
+    return r, theta, phi
+
+def cartesian_to_spherical_vel(pos, vel):
+    """
+    given pos=(x, y, z) & vel=(vx, vy, vz),
+    returns (dr, dtheta, dphi)
+    """
+    x, y, z = pos
+    r, theta, phi = cartesian_to_spherical_pos(pos)
+    vx, vy, vz = vel
+    sin_theta = np.sin(theta)
+
+    dr = (x*vx + y*vy + z*vz) / r
+    if sin_theta < EPSILON:
+        dtheta = 0.0
+        dphi = 0.0
+    else:
+        dtheta = (dr*np.cos(theta) - vz) / (r*np.sin(theta))
+        dphi = (vy*np.cos(phi) - vx*np.sin(phi)) / (r*np.sin(theta))
+
+    return dr, dtheta, dphi
