@@ -58,13 +58,21 @@ def cartesian_to_spherical_vel(pos, vel):
 
     return dr, dtheta, dphi
 
-def compute_energy(bh_mass, r, dr, dphi):
+def compute_E(bh_mass, r, dr, dphi):
     """Compute the conserved energy E for the photon."""
-    return (1 - 2 * bh_mass / r) * np.sqrt(dr**2 + r**2 * dphi**2)
+    f = 1 - 2*bh_mass / r
+    return f * np.sqrt((dr**2/f + (r**2)*(dphi**2))/f)
 
 def compute_dt(bh_mass, r, E):
     """
-    Compute the time component dt based on the conserved energy E.
+    Compute the time velocity component
+    dt based on the conserved energy E.
     """
-    # Compute dt from E and r
     return E / (1 - 2 * bh_mass / r)
+
+def normalize(v):
+    """given a vector v, returns a normalized vector."""
+    mag = np.linalg.norm(v)
+    if mag == 0:
+        return v
+    return v / mag
