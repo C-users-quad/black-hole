@@ -36,6 +36,7 @@ compute_shader = (
 
     #define EPSILON 1e-5
     #define UP vec3(0.0, 1.0, 0.0)
+    #define NUM_STEPS 5000
     #define FOV 45.0
     #define h 1.0
 
@@ -103,11 +104,11 @@ compute_shader = (
         float tanHalfFov = tan(radians(FOV) / 2.0)
 
         float x = (
-            (2.0*(i + 0.5) / windowWidth - 1) *
+            (2.0*(i + 0.5) / windowWidth - 1.0) *
             (tanHalfFov * aspect)
         );
         float y = (
-            (1 - 2.0*(j + 0.5) / windowHeight) *
+            (1.0 - 2.0*(j + 0.5) / windowHeight) *
             tanHalfFov
         );
 
@@ -127,7 +128,7 @@ compute_shader = (
         // create state vector
         float state[6] = float[6](r, theta, phi, dr, dtheta, dphi);
 
-        // return generated ray
+        // initialize and return generated ray
         Ray ray;
         ray.pos = camPos;
         ray.r = r; ray.theta = theta; ray.phi = phi;
@@ -141,7 +142,7 @@ compute_shader = (
         // modify result[6] in place here (kX)
     }
 
-    void rk4Step(in float state[6], float E, float rS, out float result[6]) {
+    void rk4Step(in float state[6], float rS, float E, out float result[6]) {
         float k1[6], k2[6], k3[6], k4[6], temp[6];
 
         geodesic(state, rS, E, k1);
@@ -160,9 +161,15 @@ compute_shader = (
     }
 
     void main() {
-        vec3 pos = vec3(camPos)
-
-        Ray ray = Ray()
+        // create ray to step
+        Ray ray = generateRay(
+            windowWidth, windowHeight, camPos, bhMass, pixelX, pixelY
+        );
+        for (int i=0; i < NUM_STEPS; i++) {
+            // step ray
+            rk4Step(ray.state, rS, ray.E);
+            
+        }
     }
     """
 )
