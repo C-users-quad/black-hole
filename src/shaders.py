@@ -39,6 +39,7 @@ compute_shader = (
     #define NUM_STEPS 5000
     #define FOV 45.0
     #define h 1.0
+    #define c 1.0
 
     vec3 cartesianToSphericalPos(vec3 pos) {
         float x = pos[0];
@@ -74,6 +75,7 @@ compute_shader = (
         return vec3(dr, dtheta, dphi);
     }
 
+    // used when initializing a ray to maintain the null condition
     float computeConservedEnergy(
         float bhMass, float r, float dr, float dphi
     ) {
@@ -81,10 +83,12 @@ compute_shader = (
         return f * sqrt((dr*dr/f + r*r*dphi*dphi/f) / f);
     }
 
+    // used to reconstruct dt in the geodesic function from E
     float computeDt(float bhMass, float r, float conservedEnergy) {
         return conservedEnergy / (1 - 2 * bhMass / r);
     }
 
+    // a ray with a cartesian position and spherical properties.
     struct Ray {
         vec3 pos;
         float r; float theta; float phi;
@@ -92,6 +96,7 @@ compute_shader = (
         float E; float state[6];
     };
 
+    // a function used to initialize a ray at a pixel position (i, j).
     Ray generateRay(
         int windowWidth, int windowHeight,
         vec3 camPos, float bhMass, int i, int j
@@ -138,10 +143,40 @@ compute_shader = (
         return ray;
     }
 
-    void geodesic(in float state[6], float rS, float E, out float result[6]) {
+    // the geodesic trajectory.
+    void geodesic(in float state[6], float rS, float bhMass, float E, out float result[6]) {
         // modify result[6] in place here (kX)
+        // unpack state vector
+        float r=state[0]; float theta=state[1]; float phi=state[2];
+        float dr=state[3]; float dtheta=state[4]; float dphi=state[5];
+
+        // add velocity vector to new state vector
+        result[0] = dr; result[1] = dtheta; result[2] = dphi;
+
+        // recalculate key values
+        float dt = computeDt(bhMass, r, E);
+        float f = 1 - rS / r;
+
+        // radial acceleration
+        result[3] = (
+            - (c*c*rS*f)/(2*r*r)*dt*dt
+            + rS/(2*r*r*f)*dr*dr + r*f*dtheta*dtheta
+            + r*f*sin(theta)*sin(theta)*dphi*dphi
+        );
+
+        // azimuthal acceleration
+        result[4] = (
+            - 1/r*dr*dtheta +
+            sin(theta)*cos(theta)*dphi*dphi
+        );
+
+        // polar acceleration
+        result[5] = (
+            - 1/r*dr*dphi - cot(theta)*dtheta*dphi
+        );
     }
 
+    // the geodesic trajectory integrator.
     void rk4Step(in float state[6], float rS, float E, out float result[6]) {
         float k1[6], k2[6], k3[6], k4[6], temp[6];
 
@@ -160,15 +195,17 @@ compute_shader = (
         }
     }
 
+    // steps a ray NUM_STEPS times and checks if an end-state has been reached.
     void main() {
         // create ray to step
         Ray ray = generateRay(
             windowWidth, windowHeight, camPos, bhMass, pixelX, pixelY
         );
+
         for (int i=0; i < NUM_STEPS; i++) {
             // step ray
             rk4Step(ray.state, rS, ray.E);
-            
+
         }
     }
     """
