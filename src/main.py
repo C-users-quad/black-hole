@@ -49,8 +49,10 @@ class Game(glw.WindowConfig):
         self.ctx.enable(moderngl.DEPTH_TEST)
         self.prog=self.ctx.program(
             vertex_shader=vert_shader,
-            fragment_shader=frag_shader
+            fragment_shader=frag_shader,
         )
+        # compute shader for gpu accelereated integration
+        self.comp_shade = self.ctx.compute_shader(compute_shader)
         self.vbo = self.ctx.buffer(vertices.tobytes())
         self.ibo = self.ctx.buffer(indices.tobytes())
         self.vao = self.ctx.vertex_array(
@@ -70,6 +72,7 @@ class Game(glw.WindowConfig):
 
     def update(self, dt):
         self.cam.update(self.input, dt)
+        self.comp_shade.run()
         self.update_program()
 
     def draw(self):

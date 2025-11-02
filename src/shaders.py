@@ -38,19 +38,29 @@ compute_shader = (
     #define UP vec3(0.0, 1.0, 0.0)
     #define NUM_STEPS 5000
     #define FOV 45.0
-    #define h 1.0
+    #define H 1.0
+    #define ESCAPE_R 1e5
     #define c 1.0
 
     vec3 cartesianToSphericalPos(vec3 pos) {
-        float x = pos[0];
-        float y = pos[1];
-        float z = pos[2];
+        float x = pos.x;
+        float y = pos.y;
+        float z = pos.z;
 
         float r = length(pos);
         float theta = (r >= 0) ? acos(clamp(z / r, -1, 1)) : 0.0;
         float phi = atan(y, x);
 
         return vec3(r, theta, phi);
+    }
+
+    vec3 sphericalToCartesianPos(vec3 pos) {
+        float sinTheta = sin(pos.y);
+        return vec3(
+            pos.x*sinTheta*cos(pos.z),
+            pos.x*sinTheta*sin(pos.z),
+            pos.x*cos(pos.y)
+        );
     }
 
     vec3 cartesianToSphericalVel(vec3 vel, vec3 pos) {
@@ -75,7 +85,6 @@ compute_shader = (
         return vec3(dr, dtheta, dphi);
     }
 
-    // used when initializing a ray to maintain the null condition
     float computeConservedEnergy(
         float bhMass, float r, float dr, float dphi
     ) {
@@ -83,12 +92,10 @@ compute_shader = (
         return f * sqrt((dr*dr/f + r*r*dphi*dphi/f) / f);
     }
 
-    // used to reconstruct dt in the geodesic function from E
     float computeDt(float bhMass, float r, float conservedEnergy) {
         return conservedEnergy / (1 - 2 * bhMass / r);
     }
 
-    // a ray with a cartesian position and spherical properties.
     struct Ray {
         vec3 pos;
         float r; float theta; float phi;
@@ -96,24 +103,23 @@ compute_shader = (
         float E; float state[6];
     };
 
-    // a function used to initialize a ray at a pixel position (i, j).
     Ray generateRay(
         int windowWidth, int windowHeight,
-        vec3 camPos, float bhMass, int i, int j
+        vec3 camPos, float bhMass, int pixelX, int pixelY
     ) {
         // calculate initial cartesian velocity
         float aspect = float(windowWidth) / windowHeight;
         vec3 forward = normalize(-camPos);
         vec3 right = normalize(cross(forward, UP));
         vec3 up = cross(right, forward);
-        float tanHalfFov = tan(radians(FOV) / 2.0)
+        float tanHalfFov = tan(radians(FOV) / 2.0);
 
         float x = (
-            (2.0*(i + 0.5) / windowWidth - 1.0) *
+            (2.0*(pixelX + 0.5) / windowWidth - 1.0) *
             (tanHalfFov * aspect)
         );
         float y = (
-            (1.0 - 2.0*(j + 0.5) / windowHeight) *
+            (1.0 - 2.0*(pixelY + 0.5) / windowHeight) *
             tanHalfFov
         );
 
@@ -143,6 +149,18 @@ compute_shader = (
         return ray;
     }
 
+    void updateRayAttribs(inout Ray ray) {
+        ray.r      = ray.state[0];
+        ray.theta  = ray.state[1];
+        ray.phi    = ray.state[2];
+        ray.dr     = ray.state[3];
+        ray.dtheta = ray.state[4];
+        ray.dphi   = ray.state[5];
+        ray.pos    = (
+            sphericalToCartesianPos(vec3(ray.r, ray.theta, ray.phi))
+        );
+    }
+
     // the geodesic trajectory.
     void geodesic(in float state[6], float rS, float bhMass, float E, out float result[6]) {
         // modify result[6] in place here (kX)
@@ -159,54 +177,94 @@ compute_shader = (
 
         // radial acceleration
         result[3] = (
-            - (c*c*rS*f)/(2*r*r)*dt*dt
-            + rS/(2*r*r*f)*dr*dr + r*f*dtheta*dtheta
+            - (c*c*rS*f)/(2.0*r*r)*dt*dt
+            + rS/(2.0*r*r*f)*dr*dr
+            + r*f*dtheta*dtheta
             + r*f*sin(theta)*sin(theta)*dphi*dphi
         );
 
         // azimuthal acceleration
         result[4] = (
-            - 1/r*dr*dtheta +
-            sin(theta)*cos(theta)*dphi*dphi
+            - (1.0/r)*dr*dtheta
+            + sin(theta)*cos(theta)*dphi*dphi
         );
 
         // polar acceleration
         result[5] = (
-            - 1/r*dr*dphi - cot(theta)*dtheta*dphi
+            - (1.0/r)*dr*dphi
+            - (1.0/tan(theta))*dtheta*dphi
         );
     }
 
-    // the geodesic trajectory integrator.
-    void rk4Step(in float state[6], float rS, float E, out float result[6]) {
+    void rk4Step(inout float state[6], float rS, float bhMass, float E) {
         float k1[6], k2[6], k3[6], k4[6], temp[6];
 
-        geodesic(state, rS, E, k1);
-        for (int i=0; i < 6; i++) temp[i]=state[i] + (h/2.0) * k1[i];
-        geodesic(temp, rS, E, k2);
-        for (int i=0; i < 6; i++) temp[i]=state[i] + (h/2.0) * k2[i];
-        geodesic(temp, rS, E, k3);
-        for (int i=0; i < 6; i++) temp[i]=state[i] + h * k3[i];
-        geodesic(temp, rS, E, k4);
+        geodesic(state, rS, bhMass, E, k1);
+        for (int i=0; i < 6; i++) temp[i]=state[i] + (H/2.0) * k1[i];
+        geodesic(temp, rS, bhMass, E, k2);
+        for (int i=0; i < 6; i++) temp[i]=state[i] + (H/2.0) * k2[i];
+        geodesic(temp, rS, bhMass, E, k3);
+        for (int i=0; i < 6; i++) temp[i]=state[i] + H * k3[i];
+        geodesic(temp, rS, bhMass, E, k4);
 
         for (int i=0; i < 6; i++) {
-            result[i] = (
-                state[i] + (h/6.0)*(k1[i] + 2*k2[i] + 2*k3[i] + k4[i])
-            );
+            state[i] += (H/6.0)*(k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
         }
     }
 
-    // steps a ray NUM_STEPS times and checks if an end-state has been reached.
+    bool crossesEquatorialPlane(vec3 currentPos, vec3 lastPos) {
+        bool crossed = (oldPos.y * newPos.y < 0.0);
+        float r = length(vec2(newPos.x, newPos.z));
+        return crossed && (r >= diskInnerR && r <= diskOuterR);
+    }
+
     void main() {
-        // create ray to step
+        // create ray
         Ray ray = generateRay(
             windowWidth, windowHeight, camPos, bhMass, pixelX, pixelY
         );
 
-        for (int i=0; i < NUM_STEPS; i++) {
-            // step ray
-            rk4Step(ray.state, rS, ray.E);
+        // initialize variables
+        bool hitDisk = false; bool hitBH = false;
+        vec4 color = vec4(0.0);
+        vec3 lastPos = ray.pos;
 
+        // step ray
+        for (int i=0; i < NUM_STEPS; i++) {
+            // update ray
+            rk4Step(ray.state, rS, bhMass, ray.E);
+            updateRayAttribs(ray);
+
+            // checks if ray hits black hole.
+            if (ray.r <= rS) {
+                hitBH = true;
+                break;
+            }
+
+            // checks if ray hit the accretion disk.
+            if (crossesEquatorialPlane(ray.pos, lastPos)) {
+                hitDisk = true;
+                break;
+            }
+
+            // checks if ray escapes off to infinity
+            if (ray.r >= ESCAPE_R) {
+                break;
+            }
+
+            // stores last position.
+            lastPos = ray.pos;
         }
+
+        // determines pixel color based on ray trajectory
+        if (hitDisk) {
+            color = vec4(1.0);
+        } else if (hitBH) {
+            color = vec4(0.0);
+        } else {
+            color = vec4(0.0);
+        }
+
     }
     """
 )
