@@ -40,7 +40,7 @@ class Game(glw.WindowConfig):
     gl_version = (3, 3)
     window_size = (WINDOW_WIDTH, WINDOW_HEIGHT)
     aspect_ratio = WINDOW_WIDTH / WINDOW_HEIGHT
-    title = "3d tests go brrr"
+    title = "Black Hole"
     resizable = True
 
     def __init__(self, **kwargs):
@@ -99,3 +99,4 @@ class Game(glw.WindowConfig):
 
 if __name__ == '__main__':
     glw.run_window_config(Game)
+
