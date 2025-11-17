@@ -76,3 +76,7 @@ def normalize(v):
     if mag == 0:
         return v
     return v / mag
+
+def get_comp_shader_src():
+    with open('shaders/geodesic.comp') as f:
+        return f.read()

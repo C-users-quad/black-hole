@@ -7,10 +7,12 @@ class Ray:
         self.r, self.theta, self.phi = (
             cartesian_to_spherical_pos(pos)
         )
-        self.dr, self.dtheta, self.dphi = (
+        self.dr, self.dtheta, self.dphi =(
             cartesian_to_spherical_vel(vel, pos)
         )
-        self.E = compute_E(bh_mass, self.r, self.dr, self.dphi)
+        self.E = compute_E(
+            bh_mass, self.r, self.dr, self.dphi
+        )
         self.state = np.array([
             self.r,  self.theta,  self.phi,
             self.dr, self.dtheta, self.dphi
