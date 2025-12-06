@@ -43,7 +43,6 @@ class Game(glw.WindowConfig):
         # initialize other
         self.input = set()
         self.cam = Camera([2.0, 0.0, 3.0], [0.0,0.0,0.0])
-        self.mvp = get_mvp_matrix(self.cam.pos, self.aspect_ratio)
         self.update_program()
 
     def on_render(self, time: float, frametime: float):
