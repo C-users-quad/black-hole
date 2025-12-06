@@ -28,8 +28,8 @@ R_S = BH_MASS * 2
 
 # cam params
 MIN_ZOOM, MAX_ZOOM = 1, 15
-PAN_SPEED = 1
-ZOOM_SPEED = 1
+PAN_SPEED = 5
+ZOOM_SPEED = 10
 
 # keys
 MOVE_KEYS = {

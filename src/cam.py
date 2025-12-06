@@ -6,6 +6,7 @@ class Camera:
     def __init__(self, pos, target):
         # store camera position and position the camera orbits/looks at
         self.pos = np.array(pos)
+        self.old_pos = self.pos.copy()
         self.target = np.array(target)
 
         # calculate angles
@@ -21,11 +22,11 @@ class Camera:
     def parse_input(self, input, dt):
         for key in input:
             if key == "W":
-                self.update_elevation(1, dt)
+                self.update_elevation(-1, dt)
             elif key == "A":
                 self.update_azimuth(-1, dt)
             elif key == "S":
-                self.update_elevation(-1, dt)
+                self.update_elevation(1, dt)
             elif key == "D":
                 self.update_azimuth(1, dt)
 
@@ -46,6 +47,7 @@ class Camera:
         self.radius = clamp(self.radius, MIN_ZOOM, MAX_ZOOM)
 
     def update_pos(self):
+        self.old_pos = self.pos.copy()
         self.pos[0] = (
             self.target[0] + self.radius
             * np.cos(self.elevation) * np.sin(self.azimuth)
@@ -61,3 +63,6 @@ class Camera:
 
     def get_pos(self):
         return self.pos.tolist()
+
+    def moved(self):
+        return self.old_pos != self.pos
