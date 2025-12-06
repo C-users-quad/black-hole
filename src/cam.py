@@ -47,7 +47,7 @@ class Camera:
 
     def update_pos(self):
         self.pos[0] = (
-            self.target[0] + self.radius 
+            self.target[0] + self.radius
             * np.cos(self.elevation) * np.sin(self.azimuth)
         )
         self.pos[1] = (
@@ -61,4 +61,3 @@ class Camera:
 
     def get_pos(self):
         return self.pos.tolist()
-    

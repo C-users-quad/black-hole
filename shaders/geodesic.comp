@@ -3,120 +3,175 @@
 layout(local_size_x = 16, local_size_y = 16) in;
 layout(rgba32f, binding = 0) uniform image2D img;
 
-uniform float diskInnerR;
-uniform float diskOuterR;
 uniform vec3 camPos;
 uniform int windowWidth;
 uniform int windowHeight;
-uniform float bhMass;
-uniform float rS;
+uniform float bhMass; // M
+uniform float rS;     // Schwarzschild radius = 2M
 
-#define EPSILON 1e-5
+#define EPSILON 1e-6
 #define UP vec3(0.0, 1.0, 0.0)
 #define NUM_STEPS 5000
 #define FOV 45.0
 #define H 0.05
-#define ESCAPE_R 1000
+#define ESCAPE_R 1000.0
 #define c 1.0
 
 vec3 cartesianToSphericalPos(vec3 pos) {
+    // extract cartesian position components from input
     float x = pos.x;
     float y = pos.y;
     float z = pos.z;
 
-    // calculate spherical position
+    // get radial coord by calculating the magnitude of the position
     float r = length(pos);
-    float theta = (r >= 0) ? acos(clamp(z / r, -1.0, 1.0)) : 0.0;
-    float phi = atan(z, x);
 
+    // initialize theta and phi
+    float theta = 0.0;
+    float phi = 0.0;
+
+    // chcek used to prevent division by zero
+    if (r > 0.0) {
+        // theta defined as angle from positive y axis.
+        theta = acos(clamp(y / r, -1.0, 1.0));
+        // phi defined as angle from the positive x axis to positive z axis
+        phi = atan(z, x);
+    }
     return vec3(r, theta, phi);
 }
 
-vec3 sphericalToCartesianPos(vec3 pos) {
-    float sinTheta = sin(pos.y);
+vec3 sphericalToCartesianPos(vec3 s) {
+    // extract components from spherical position input
+    float r = s.x;
+    float theta = s.y;
+    float phi = s.z;
+
+    // calculate sintheta to avoid calculating it multiple times
+    float sinTheta = sin(theta);
+    /*
+        return vec3 representing cartesian pos, following conventions
+        defined in cartesianToSphericalPos
+    */
     return vec3(
-        pos.x*sinTheta*cos(pos.z),
-        pos.x*sinTheta*sin(pos.z),
-        pos.x*cos(pos.y)
+        r * sinTheta * cos(phi),
+        r * cos(theta),
+        r * sinTheta * sin(phi)
     );
 }
 
 vec3 cartesianToSphericalVel(vec3 vel, vec3 pos) {
-    // initialize values needed for velocity calculation
-    vec3 sPos = cartesianToSphericalPos(pos);
-    float x = pos.x; float y = pos.y; float z = pos.z;
-    float r = sPos.x; float theta = sPos.y; float phi = sPos.z;
-    float vx = vel.x; float vy = vel.y; float vz = vel.z;
+    // get position components from input
+    float x = pos.x;
+    float y = pos.y;
+    float z = pos.z;
+
+    // get velocity components from input
+    float vx = vel.x;
+    float vy = vel.y;
+    float vz = vel.z;
+
+    // calculate radial coord by getting the magnitude of the position vector
+    float r = length(pos);
+
+    // usually does not happen, safety.
+    if (r < EPSILON) return vec3(0.0);
+
+    // calculate theta following conventions
+    float theta = acos(clamp(y / r, -1.0, 1.0));
     float sinTheta = sin(theta);
 
-    // declare velocity values
-    float dr = (x*vx + y*vy + z*vz) / r; float dtheta; float dphi;
+    // get dr from derivative of formula for radial coord
+    float dr = (x * vx + y * vy + z * vz) / r;
 
-    if (sinTheta < EPSILON) {
+    float dtheta;
+
+    // prevents dtheta from blowing up.
+    if (abs(sinTheta) < EPSILON) {
         dtheta = 0.0;
+    } else {
+        float cosTheta = y / r;
+        dtheta = (dr * cosTheta - vy) / (r * sinTheta);
+    }
+
+    float dphi;
+    float sinThetaSq = sinTheta * sinTheta;
+    if (sinThetaSq < EPSILON) {
         dphi = 0.0;
     } else {
-        dtheta = ((z*(x*vx + y*vy) - vz*(x*x + y*y))
-            / (r*r*sqrt(x*x* + y*y)));
-        dphi = (x*vy - y*vx) / (x*x + y*y);
+        dphi = (x * vz - z * vx) / (r * r * sinThetaSq);
     }
 
     return vec3(dr, dtheta, dphi);
 }
 
-float computeConservedEnergy(float bhMass, float r, float dr, float dphi) {
-    // f = 1 - 2M/r
-    float f = 1.0 - 2.0 * bhMass / r;
-
-    // E = sqrt( f + dr^2 + r^2 * f * dphi^2 )
-    return sqrt( f + dr * dr + r * r * f * dphi * dphi );
+// gets conserved energy for lightlike obj's from initial conditions
+float computeConservedEnergy(float bhMass, float r, float dr, float dtheta, float dphi, float theta) {
+    float f = 1.0 - (2.0 * bhMass) / r;
+    float sinTheta = sin(theta);
+    float angSquared = dtheta * dtheta + (sinTheta * sinTheta) * dphi * dphi;
+    float inner = dr * dr + f * r * r * angSquared;
+    inner = max(inner, 0.0);
+    return sqrt(inner);
 }
 
-float computeDt(float bhMass, float r, float conservedEnergy) {
-    return conservedEnergy / (1 - 2 * bhMass / r);
+// computes time derivative for lightlike obj's from conserved energy
+float computeTprime(float bhMass, float r, float conservedEnergy) {
+    float f = 1.0 - (2.0 * bhMass) / r;
+    if (abs(f) < EPSILON) f = EPSILON * sign(f);
+    return conservedEnergy / f;
 }
 
+// ray structure to store ray data.
 struct Ray {
     vec3 pos;
-    float r;  float theta;  float phi;
+    float r; float theta; float phi;
     float dr; float dtheta; float dphi;
-    float E;  float state[6];
+    float E;
+    float state[6];
 };
 
+// ray initializer.
 Ray generateRay(
     int windowWidth, int windowHeight,
     vec3 camPos, float bhMass, int pixelX, int pixelY
 ) {
-    // calculate initial cartesian velocity
-    float aspect = float(windowWidth) / windowHeight;
-    vec2 uv = (vec2(pixelX, pixelY) / vec2(windowWidth, windowHeight)) * 2.0 - 1.0;
+    float aspect = float(windowWidth) / float(windowHeight);
+    vec2 ndc = (vec2(float(pixelX) + 0.5, float(pixelY) + 0.5) / vec2(float(windowWidth), float(windowHeight))) * 2.0 - 1.0;
+    float fovScale = tan(radians(FOV * 0.5));
+    vec2 uv = vec2(ndc.x * aspect * fovScale, -ndc.y * fovScale);
+
     vec3 forward = normalize(-camPos);
     vec3 right = normalize(cross(forward, UP));
     vec3 up = cross(right, forward);
 
-    vec3 dirRay = normalize(uv.x*right + uv.y*up + forward);
+    vec3 dirRay = normalize(uv.x * right + uv.y * up + forward);
 
-    // calculate initial spherical position
     vec3 sPos = cartesianToSphericalPos(camPos);
-    float r=sPos.x; float theta=sPos.y; float phi=sPos.z;
+    float r = sPos.x;
+    float theta = sPos.y;
+    float phi = sPos.z;
 
-    // calculate initial spherical velocity
     vec3 sVel = cartesianToSphericalVel(dirRay, camPos);
-    float dr=sVel.x; float dtheta=sVel.y; float dphi=sVel.z;
+    float dr = sVel.x;
+    float dtheta = sVel.y;
+    float dphi = sVel.z;
 
-    // caluclate conserved energy
-    float E = computeConservedEnergy(bhMass, r, dr, dphi);
+    float E = computeConservedEnergy(bhMass, r, dr, dtheta, dphi, theta);
 
-    // create state vector
-    float state[6] = float[6](r, theta, phi, dr, dtheta, dphi);
+    float state[6];
+    state[0] = r;
+    state[1] = theta;
+    state[2] = phi;
+    state[3] = dr;
+    state[4] = dtheta;
+    state[5] = dphi;
 
-    // initialize and return generated ray
     Ray ray;
     ray.pos = camPos;
     ray.r = r; ray.theta = theta; ray.phi = phi;
     ray.dr = dr; ray.dtheta = dtheta; ray.dphi = dphi;
     ray.E = E;
-    for(int i=0; i < 6; i++) ray.state[i] = state[i];
+    for (int i = 0; i < 6; ++i) ray.state[i] = state[i];
     return ray;
 }
 
@@ -127,113 +182,108 @@ void updateRayAttribs(inout Ray ray) {
     ray.dr     = ray.state[3];
     ray.dtheta = ray.state[4];
     ray.dphi   = ray.state[5];
-    ray.pos    = (
-        sphericalToCartesianPos(vec3(ray.r, ray.theta, ray.phi))
-    );
+    ray.pos    = sphericalToCartesianPos(vec3(ray.r, ray.theta, ray.phi));
 }
 
-// the geodesic trajectory.
 void geodesic(in float state[6], float rS, float bhMass, float E, out float result[6]) {
-    // modify result[6] in place here (kX)
-    // unpack state vector
-    float r=state[0]; float theta=state[1]; float phi=state[2];
-    float dr=state[3]; float dtheta=state[4]; float dphi=state[5];
+    float r = state[0];
+    float theta = state[1];
+    float dr = state[3];
+    float dtheta = state[4];
+    float dphi = state[5];
 
-    // add velocity vector to new state vector
-    result[0] = dr; result[1] = dtheta; result[2] = dphi;
+    result[0] = dr;
+    result[1] = dtheta;
+    result[2] = dphi;
 
-    // recalculate key values
-    float dt = computeDt(bhMass, r, E);
-    float f = 1 - rS / r;
+    float M = bhMass;
+    float tprime = computeTprime(M, r, E);
 
-    // radial acceleration
-    result[3] = (
-        - (c*c*rS*f)/(2.0*r*r)*dt*dt
-        + rS/(2.0*r*r*f)*dr*dr
-        + r*f*dtheta*dtheta
-        + r*f*sin(theta)*sin(theta)*dphi*dphi
-    );
+    float gamma_r_tt = (M * (r - rS)) / (r * r * r);
+    float gamma_r_rr = - M / (r * (r - rS));
+    float gamma_r_thth = - (r - rS);
+    float gamma_r_phph = - (r - rS) * (sin(theta) * sin(theta));
 
-    // azimuthal acceleration
-    result[4] = (
-        - (1.0/r)*dr*dtheta
-        + sin(theta)*cos(theta)*dphi*dphi
-    );
+    float rdd = - gamma_r_tt * (tprime * tprime)
+                - gamma_r_rr * (dr * dr)
+                - gamma_r_thth * (dtheta * dtheta)
+                - gamma_r_phph * (dphi * dphi);
 
-    // polar acceleration
-    result[5] = (
-        - (1.0/r)*dr*dphi
-        - (1.0/tan(theta))*dtheta*dphi
-    );
+    float thdd = - 2.0 * (dr / r) * dtheta + (sin(theta) * cos(theta)) * (dphi * dphi);
+
+    float cotTheta = 0.0;
+    if (abs(sin(theta)) > EPSILON) cotTheta = cos(theta) / sin(theta);
+    float phdd = - 2.0 * (dr / r) * dphi - 2.0 * cotTheta * dtheta * dphi;
+
+    result[3] = rdd;
+    result[4] = thdd;
+    result[5] = phdd;
 }
 
 void rk4Step(inout float state[6], float rS, float bhMass, float E) {
-    float k1[6], k2[6], k3[6], k4[6], temp[6];
+    float k1[6];
+    float k2[6];
+    float k3[6];
+    float k4[6];
+    float temp[6];
 
     geodesic(state, rS, bhMass, E, k1);
-    for (int i=0; i < 6; i++) temp[i]=state[i] + (H/2.0) * k1[i];
+    for (int i = 0; i < 6; ++i) temp[i] = state[i] + 0.5 * H * k1[i];
     geodesic(temp, rS, bhMass, E, k2);
-    for (int i=0; i < 6; i++) temp[i]=state[i] + (H/2.0) * k2[i];
+    for (int i = 0; i < 6; ++i) temp[i] = state[i] + 0.5 * H * k2[i];
     geodesic(temp, rS, bhMass, E, k3);
-    for (int i=0; i < 6; i++) temp[i]=state[i] + H * k3[i];
+    for (int i = 0; i < 6; ++i) temp[i] = state[i] + H * k3[i];
     geodesic(temp, rS, bhMass, E, k4);
 
-    for (int i=0; i < 6; i++) {
-        state[i] += (H/6.0)*(k1[i] + 2*k2[i] + 2*k3[i] + k4[i]);
+    for (int i = 0; i < 6; ++i) {
+        state[i] += (H / 6.0) * (k1[i] + 2.0 * k2[i] + 2.0 * k3[i] + k4[i]);
     }
 }
 
-bool crossesEquatorialPlane(vec3 currentPos, vec3 lastPos) {
+bool crossesEquatorialPlane(vec3 currentPos, vec3 lastPos,
+    float diskInnerR, float diskOuterR) {
     bool crossed = (lastPos.y * currentPos.y < 0.0);
-    float r = length(vec2(currentPos.x, currentPos.z));
-    return crossed && (r >= diskInnerR && r <= diskOuterR);
+    float cylR = length(vec2(currentPos.x, currentPos.z));
+    return crossed && (cylR >= diskInnerR && cylR <= diskOuterR);
 }
 
 void main() {
-    // get pixel
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
-    if (pixel.x >= windowWidth || pixel.y >= windowHeight)
-        return;
+    if (pixel.x >= windowWidth || pixel.y >= windowHeight) return;
 
-    // create ray
-    Ray ray = generateRay(
-        windowWidth, windowHeight, camPos, bhMass, pixel.x, pixel.y
-    );
+    Ray ray = generateRay(windowWidth, windowHeight, camPos, bhMass, pixel.x, pixel.y);
 
-    // initialize variables
+    // define disk radii from innermost stable orbit
+    float diskInnerR = 3.0 * rS;
+    float diskOuterR = diskInnerR * 3.0;
+
     bool hitDisk = false;
     bool hitBH = false;
     vec3 color = vec3(0.0);
     vec3 lastPos = ray.pos;
 
-    // step ray
-    for (int i=0; i < NUM_STEPS; i++) {
-        // update ray
+    for (int i = 0; i < NUM_STEPS; ++i) {
         rk4Step(ray.state, rS, bhMass, ray.E);
         updateRayAttribs(ray);
 
-        // checks if ray hits black hole.
         if (ray.r <= rS) {
             hitBH = true;
             break;
         }
 
-        // checks if ray hit the accretion disk.
-        if (crossesEquatorialPlane(ray.pos, lastPos)) {
+        if (crossesEquatorialPlane(ray.pos, lastPos,
+        diskInnerR, diskOuterR)) {
             hitDisk = true;
             break;
         }
 
-        // checks if ray escapes off to infinity
         if (ray.r >= ESCAPE_R) {
             break;
         }
 
-        // stores last position.
         lastPos = ray.pos;
     }
 
-    // determines pixel color based on ray trajectory
     if (hitDisk) {
         color = vec3(0.87, 0.11, 0.11);
     } else if (hitBH) {
@@ -242,7 +292,5 @@ void main() {
         color = vec3(0.0);
     }
 
-    // store pixel info in image buffer
     imageStore(img, pixel, vec4(color, 1.0));
-
 }

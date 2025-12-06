@@ -77,6 +77,14 @@ def normalize(v):
         return v
     return v / mag
 
-def get_comp_shader_src():
+def get_comp_src():
     with open('shaders/geodesic.comp') as f:
+        return f.read()
+
+def get_vert_src():
+    with open('shaders/vertex.glsl') as f:
+        return f.read()
+
+def get_frag_src():
+    with open('shaders/fragment.glsl') as f:
         return f.read()
