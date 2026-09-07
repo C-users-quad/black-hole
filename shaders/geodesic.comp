@@ -11,7 +11,7 @@ uniform float rS;     // Schwarzschild radius = 2M
 
 #define EPSILON 1e-6
 #define UP vec3(0.0, 1.0, 0.0)
-#define NUM_STEPS 1000
+#define NUM_STEPS 555
 #define FOV 45.0
 #define H 0.05
 #define ESCAPE_R 1000.0
