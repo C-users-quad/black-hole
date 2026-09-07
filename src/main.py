@@ -8,7 +8,7 @@ class Game(glw.WindowConfig):
     window_size = (WINDOW_WIDTH, WINDOW_HEIGHT)
     aspect_ratio = WINDOW_WIDTH / WINDOW_HEIGHT
     title = "Black Hole"
-    resizable = True
+    resizable = False
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -42,7 +42,7 @@ class Game(glw.WindowConfig):
 
         # initialize other
         self.input = set()
-        self.cam = Camera([2.0, 0.0, 3.0], [0.0,0.0,0.0])
+        self.cam = Camera([10.0, -5.0, 5.0], [0.0,0.0,0.0])
         self.update_program()
 
     def on_render(self, time: float, frametime: float):
@@ -75,18 +75,18 @@ class Game(glw.WindowConfig):
         self.compute['bhMass'].write(struct.pack('f', BH_MASS))
         self.compute['rS'].write(struct.pack('f', R_S))
 
-    def on_resize(self, width: int, height: int):
-        self.aspect_ratio = width / height
-        self.ctx.viewport = (0, 0, width, height)
-        self.compute['windowWidth'].write(struct.pack('i', width))
-        self.compute['windowHeight'].write(struct.pack('i', height))
-        self.tex.release()
-        self.tex = self.ctx.texture(
-            size=(width, height),
-            components=4,
-            dtype='f4'
-        )
-        self.tex.bind_to_image(0, read=False, write=True)
+    # def on_resize(self, width: int, height: int):
+    #     self.aspect_ratio = width / height
+    #     self.ctx.viewport = (0, 0, width, height)
+    #     self.compute['windowWidth'].write(struct.pack('i', width))
+    #     self.compute['windowHeight'].write(struct.pack('i', height))
+    #     self.tex.release()
+    #     self.tex = self.ctx.texture(
+    #         size=(width, height),
+    #         components=4,
+    #         dtype='f4'
+    #     )
+    #     self.tex.bind_to_image(0, read=False, write=True)
 
 
     def on_mouse_scroll_event(self, x_offset: float, y_offset: float):

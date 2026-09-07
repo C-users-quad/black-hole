@@ -35,7 +35,7 @@ class Camera:
         self.elevation = self.elevation * 0.9 + new_elevation * 0.1
         # prevents camera flipping over the poles
         self.elevation = clamp(
-            self.elevation, -np.pi/2 + EPSILON, np.pi/2 - EPSILON
+            self.elevation, -np.pi/2 + np.pi/16, np.pi/2 - np.pi/16
         )
 
     def update_azimuth(self, move_dir, dt):

@@ -5,7 +5,7 @@ import glm
 import struct
 
 # general
-WINDOW_WIDTH, WINDOW_HEIGHT = 1000, 800
+WINDOW_WIDTH, WINDOW_HEIGHT = 800, 600
 EPSILON = 1e-4
 
 # rendering params
@@ -27,7 +27,7 @@ BH_MASS = 0.5
 R_S = BH_MASS * 2
 
 # cam params
-MIN_ZOOM, MAX_ZOOM = 1, 15
+MIN_ZOOM, MAX_ZOOM = 1, 20
 PAN_SPEED = 5
 ZOOM_SPEED = 10
 
