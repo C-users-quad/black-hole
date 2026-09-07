@@ -14,7 +14,7 @@ uniform float rS;     // Schwarzschild radius = 2M
 #define NUM_STEPS 555
 #define FOV 45.0
 #define H 0.05
-#define ESCAPE_R 1000.0
+#define ESCAPE_R 100.0
 #define c 1.0
 
 vec3 cartesianToSphericalPos(vec3 pos) {
