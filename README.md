@@ -26,6 +26,8 @@ This simulates how black holes bend light near them in both 2d and 3d.
 
 \* the program allows you to observe the evolution of the ray's position with use of the trail
 
+Note: it was more like a proof-of-concept for me its not very \"complete\"
+
 ### In the 3D version:
 
  - The camera is modelled as a pinhole camera
