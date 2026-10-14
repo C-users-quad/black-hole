@@ -36,7 +36,7 @@ Note: it was more like a proof-of-concept for me its not very \"complete\"
    - If the ray escapes the black hole, the pixel is black
    - If the ray crosses the event horizon, the pixel is blue
    - If the ray intersects the accretion disc, the pixel is red
- - Ray trajectories are evolved using the Schwarzchild geodesic equation in 3D
+ - Ray trajectories are evolved using the Schwarzschild geodesic equation in 3D
 
 ## Controls
 
