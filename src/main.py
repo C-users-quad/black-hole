@@ -52,8 +52,7 @@ class Game(glw.WindowConfig):
 
     def update(self):
         self.cam.update(self.input, self.dt)
-        if self.cam.moved().any(): self.run_compute()
-        self.draw()
+        self.run_compute()
 
     def run_compute(self):
         groups_x = (self.ctx.viewport[2] + LOCAL_SIZE - 1) // LOCAL_SIZE
