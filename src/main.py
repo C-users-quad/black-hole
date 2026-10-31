@@ -52,15 +52,15 @@ class Game(glw.WindowConfig):
 
     def update(self):
         self.cam.update(self.input, self.dt)
-        self.run_compute()
+        if self.cam.moved().any(): self.run_compute()
 
     def run_compute(self):
+        self.update_program()
         groups_x = (self.ctx.viewport[2] + LOCAL_SIZE - 1) // LOCAL_SIZE
         groups_y = (self.ctx.viewport[3] + LOCAL_SIZE - 1) // LOCAL_SIZE
         self.compute.run(groups_x, groups_y, 1)
         self.ctx.memory_barrier(
             moderngl.SHADER_IMAGE_ACCESS_BARRIER_BIT)
-        self.update_program()
 
     def draw(self):
         self.ctx.clear(*CLEAR_COLOR, depth=1.0)
